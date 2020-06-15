@@ -1,0 +1,34 @@
+{
+  "canisters": {
+    "wochonecha": {
+      "main": "src/wochonecha/main.mo",
+      "type": "motoko"
+    },
+    "wochonecha_assets": {
+      "dependencies": [
+        "wochonecha"
+      ],
+      "frontend": {
+        "entrypoint": "src/wochonecha_assets/public/index.js",
+        "output": "canisters/wochonecha_assets/assets"
+      },
+      "source": [
+        "src/wochonecha_assets/assets"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "output": "canisters/",
+      "packtool": ""
+    },
+    "start": {
+      "address": "127.0.0.1",
+      "port": 8000,
+      "serve_root": "canisters/wochonecha_assets/assets"
+    }
+  },
+  "dfx": "0.5.8",
+  "version": 1
+}
