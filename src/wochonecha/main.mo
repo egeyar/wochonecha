@@ -38,6 +38,7 @@ actor Wochonecha {
       case (#completed, #completed) true;
       case (#expired, #expired) true;
       case (#inprogress, #inprogress) true;
+      case (#suggestion, #suggestion) true;
       case _ false;
     }
   };
@@ -48,6 +49,7 @@ actor Wochonecha {
       case (#completed) "completed";
       case (#expired) "expired";
       case (#inprogress) "inprogress";
+      case (#suggestion) "suggestion";
     }
   };
 
@@ -103,6 +105,48 @@ actor Wochonecha {
     "accepted challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
   };
 
+  public shared(msg) func suggestChallenge(username: Text, challengeId: ChallengeId) : async Text {
+    // Verify the user
+    let maybeUserData : ?UserData = userDb.findById(msg.caller);
+    if (Option.isNull(maybeUserData)) {
+      return "Please register to be able to suggest challenges to others";
+    };
+
+    // Verify the challenge
+    let maybechallenge : ?Challenge.Challenge = challengeDB.get(challengeId);
+    if (Option.isNull(maybechallenge)) {
+      return "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist";
+    };
+    let challenge = Option.unwrap(maybechallenge);
+
+    //Verify the recipient
+    let users = userDb.findByName(username);
+    if (users.len() == 0) {
+      return "A user with username " # username # " does not exist";
+    };
+    let userData = users[0];
+
+    // Verify that the user has not already accepted the challenge
+    if (isAcceptedOrInProgress(challengeId, userData.challenges)) {
+      return "The challenge " # Nat.toText(challengeId) # " is already accepted by user " # username
+    };
+
+    let newChallenge : ChallengeMetadata = {
+      id = challengeId;
+      status = #suggestion;
+      completionDeadline = 0;  // TODO
+      progress = 0;
+    };
+    let updatedUserData : UserData = {
+      id = userData.id;
+      name = userData.name;
+      challenges = Array.append<ChallengeMetadata>(userData.challenges, [newChallenge]);
+      friends = userData.friends;
+    };
+    userDb.update(updatedUserData);
+    "suggested challenge " # Nat.toText(challengeId) # " to user " # username
+  };
+
   public shared(msg) func completeChallenge(challengeId : ChallengeId) : async Text {
     let maybeUserData : ?UserData = userDb.findById(msg.caller);
     if (Option.isNull(maybeUserData)) {
@@ -140,6 +184,9 @@ actor Wochonecha {
 
   public query func getUser(username : Text) : async Text {
     let users = userDb.findByName(username);
+    if (users.len() == 0) {
+      return "A user with username " # username # " does not exist";
+    };
     let userDataText = userDataAsText(users[0]);
      "querying for user " # username # ":\n" # userDataText
   };
