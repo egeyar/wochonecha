@@ -4,29 +4,21 @@ module {
   public type UserId = Principal;
   public type ChallengeId = Nat;
 
-  public type Challenge = {
-    id: ChallengeId;
-    title: Text;
-    text: Text;
-    stats: ChallengeStats;
+  public type ChallengeStatus = {
+      #accepted; #completed; #expired
   };
 
-  public type AcceptedChallenge = {
-    challenge: Challenge;
-    // receivedVia: ReceivedVia;
-  };
-
-  public type ChallengeStats = {
-    creator: UserId;
-    acceptedCount: Nat;
-    completedCount: Nat;
+  public type ChallengeMetadata = {
+      id: ChallengeId;
+      status: ChallengeStatus;
+      completionDeadline: Nat;  // timestamp (unix-style?)
+      progress: Nat;  // percent completed (0-100)
   };
 
   public type UserData = {
     id: UserId;
     name: Text;
-    acceptedChallenges: [ChallengeId];
-    completedChallenges: [ChallengeId];
+    challenges: [ChallengeMetadata];
     friends: [UserId];
   };
 }
