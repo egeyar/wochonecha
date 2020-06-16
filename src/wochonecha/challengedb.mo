@@ -19,7 +19,7 @@ module {
     var iter = hashMap.iter();
 
     public func add(challenge: Challenge) {
-      ignore hashMap.set(challenge.get_id(), challenge);
+      hashMap.set(challenge.get_id(), challenge);
     };
 
     public func get(challenge_id: ChallengeId): ?Challenge {
@@ -45,6 +45,12 @@ module {
       };
 
       ?(Option.unwrap(option).1)
+    };
+
+    public func accepted(challenge_id: ChallengeId) {
+      let challenge = Option.unwrap(hashMap.get(challenge_id));
+      challenge.incr_acception_count();
+      hashMap.set(challenge.get_id(), challenge);
     };
   };
 
