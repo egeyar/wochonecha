@@ -193,6 +193,15 @@ actor Wochonecha {
     "A new challenge with id " # Nat.toText(challenge.get_id()) # " is created by user " # username
   };
 
+  public func pickMeAChallenge() : async Text {
+    let maybechallenge : ?Challenge.Challenge = challengeDB.get_any();
+    if (Option.isNull(maybechallenge)) {
+      return "There are no challenges in the database";
+    };
+    let challenge = Option.unwrap(maybechallenge);
+    challengeAsText(challenge)
+  };
+
   public query func displayChallenge(challenge_id: ChallengeId) : async Text {
     let maybechallenge : ?Challenge.Challenge = challengeDB.get(challenge_id);
     if (Option.isNull(maybechallenge)) {
