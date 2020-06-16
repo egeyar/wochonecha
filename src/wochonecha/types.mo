@@ -2,7 +2,7 @@ import Principal "mo:base/Principal";
 
 module {
   public type UserId = Principal;
-  public type ChallengeId = Principal;
+  public type ChallengeId = Nat;
 
   public type Challenge = {
     id: ChallengeId;
@@ -18,15 +18,15 @@ module {
 
   public type ChallengeStats = {
     creator: UserId;
-    accepted: Nat;
-    completed: Nat;
+    acceptedCount: Nat;
+    completedCount: Nat;
   };
 
   public type UserData = {
     id: UserId;
     name: Text;
-    acceptedChallenges: [AcceptedChallenge];
-    completedChallenges: [AcceptedChallenge];
+    acceptedChallenges: [ChallengeId];
+    completedChallenges: [ChallengeId];
     friends: [UserId];
   };
 }
