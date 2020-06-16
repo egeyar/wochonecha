@@ -7,9 +7,7 @@ import Types "./types";
 module {
   type UserId = Types.UserId;
   type ChallengeId = Types.ChallengeId;
-
   type UserData = Types.UserData;
-  type Challenge = Types.Challenge;
 
   public class UserDb() {
     func isEq(x: UserId, y: UserId): Bool { x == y };
@@ -50,8 +48,7 @@ module {
       {
         id = userId;
         name = username;
-        acceptedChallenges = [];
-        completedChallenges = [];
+        challenges = [];
         friends = [];
       }
     };

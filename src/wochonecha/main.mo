@@ -11,6 +11,8 @@ import ChallengeDB "./challengedb";
 
 actor Wochonecha {
   type ChallengeId = Types.ChallengeId;
+  type ChallengeMetadata = Types.ChallengeMetadata;
+  type ChallengeStatus = Types.ChallengeStatus;
   type UserData = Types.UserData;
   type UserId = Types.UserId;
 
@@ -22,6 +24,33 @@ actor Wochonecha {
     public func get_new_id() : Nat { let id = count; count += 1; id };
     public func get_count() : Nat { count };
   };
+
+  func eqStatus(s1: ChallengeStatus, s2 : ChallengeStatus) : Bool {
+    switch (s1, s2) {
+      case (#accepted, #accepted) true;
+      case (#completed, #completed) true;
+      case (#expired, #expired) true;
+      case _ false;
+    }
+  };
+
+  func statusText(s: ChallengeStatus) : Text {
+    switch (s) {
+      case (#accepted) "accepted";
+      case (#completed) "completed";
+      case (#expired) "expired";
+    }
+  };
+
+  func isAccepted(cId: ChallengeId, cMetadata: [ChallengeMetadata]): Bool {
+    func accepted(cm: ChallengeMetadata): Bool { cm.id == cId and eqStatus(cm.status, #accepted)};
+    switch (Array.find<ChallengeMetadata>(accepted, cMetadata)) {
+      case (null) { false };
+      case (_) { true };
+    };
+  };
+
+
 
   public shared(msg) func createUser(username: Text) : async Text {
     let userData : UserData = userDb.createOrReturn(msg.caller, username);
@@ -44,19 +73,22 @@ actor Wochonecha {
     let challenge = Option.unwrap(maybechallenge);
 
     // Verify that the user has not already accepted the challenge
-    for (id in userData.acceptedChallenges.vals()) {
-      if (id == challengeId) {
-        return "The challenge " # Nat.toText(challengeId) # " is already accepted by user " # userData.name
-      };
+    if (isAccepted(challengeId, userData.challenges)) {
+      return "The challenge " # Nat.toText(challengeId) # " is already accepted by user " # userData.name
     };
 
+    let newChallenge : ChallengeMetadata = {
+      id = challengeId;
+      status = #accepted;
+      completionDeadline = 0;  // TODO
+      progress = 0;
+    };
     let updatedUserData : UserData = {
-        id = userData.id;
-        name = userData.name;
-        acceptedChallenges = Array.append<ChallengeId>(userData.acceptedChallenges, [challengeId]);
-        completedChallenges = userData.completedChallenges;
-        friends = userData.friends;
-      };
+      id = userData.id;
+      name = userData.name;
+      challenges = Array.append<ChallengeMetadata>(userData.challenges, [newChallenge]);
+      friends = userData.friends;
+    };
     userDb.update(updatedUserData);
     challengeDB.accepted(challengeId : ChallengeId);
     "accepted challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
@@ -69,23 +101,27 @@ actor Wochonecha {
     };
 
     let userData = Option.unwrap(maybeUserData);
-    var remainingChallenges : [ChallengeId] = [];
-    var foundAccepted = false;
-    for (cId in userData.acceptedChallenges.vals()) {
-      if (challengeId == cId) {
-        foundAccepted := true;
-      } else {
-        remainingChallenges := Array.append<ChallengeId>(remainingChallenges, [cId]);
-      }
+    if (not isAccepted(challengeId, userData.challenges)) {
+      return "challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
     };
-    if (not foundAccepted) {
-      return "challenge " # Nat.toText(challengeId) # " was not accepted yet, so it cannot be completed"
+    var cs : [ChallengeMetadata] = [];
+    for (cm in userData.challenges.vals()) {
+      if (cm.id == challengeId and eqStatus(cm.status, #accepted)) {
+        let completed : ChallengeMetadata = {
+          id = cm.id;
+          status = #completed;
+          completionDeadline = 0;  // TODO
+          progress = 100;
+        };
+        cs := Array.append<ChallengeMetadata>(cs, [completed]);
+      } else {
+        cs := Array.append<ChallengeMetadata>(cs, [cm]);
+      }
     };
     let updatedUserData : UserData = {
         id = userData.id;
         name = userData.name;
-        acceptedChallenges = remainingChallenges;
-        completedChallenges = Array.append<ChallengeId>(userData.completedChallenges, [challengeId]);
+        challenges = cs;
         friends = userData.friends;
       };
     userDb.update(updatedUserData);
@@ -96,6 +132,43 @@ actor Wochonecha {
     let users = userDb.findByName(username);
     let userDataText = userDataAsText(users[0]);
      "querying for user " # username # ":\n" # userDataText
+  };
+
+  public shared(msg) func setProgress(challengeId: ChallengeId, newProgress: Nat) : async Text {
+    if (newProgress > 100) {
+      return "progress must be in the range 0..100";
+    };
+    let maybeUserData : ?UserData = userDb.findById(msg.caller);
+    if (Option.isNull(maybeUserData)) {
+      return "user not registered" 
+    };
+
+    let userData = Option.unwrap(maybeUserData);
+    if (not isAccepted(challengeId, userData.challenges)) {
+      return "challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
+    };
+    var cs : [ChallengeMetadata] = [];
+    for (cm in userData.challenges.vals()) {
+      if (cm.id == challengeId and eqStatus(cm.status, #accepted)) {
+        let completed : ChallengeMetadata = {
+          id = cm.id;
+          status = #completed;
+          completionDeadline = 0;  // TODO
+          progress = newProgress;
+        };
+        cs := Array.append<ChallengeMetadata>(cs, [completed]);
+      } else {
+        cs := Array.append<ChallengeMetadata>(cs, [cm]);
+      }
+    };
+    let updatedUserData : UserData = {
+        id = userData.id;
+        name = userData.name;
+        challenges = cs;
+        friends = userData.friends;
+      };
+    userDb.update(updatedUserData);
+    "updated progress for challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
   };
 
   public shared(msg) func createChallenge(title: Text, description: Text) : async Text {
@@ -121,12 +194,8 @@ actor Wochonecha {
   func userDataAsText(userData : UserData) : Text {
     let userId : Text = Nat.toText(Nat.fromWord32(Principal.hash(userData.id)));
     var userText : Text = "id: " # userId # ", name: " # userData.name # ", accepted: [";
-    for (challengeId in userData.acceptedChallenges.vals()) {
-      userText := userText # " " # Nat.toText(challengeId);
-    };
-    userText := userText # " ], completed: [";
-    for (challengeId in userData.completedChallenges.vals()) {
-      userText := userText # " " # Nat.toText(challengeId);
+    for (cm in userData.challenges.vals()) {
+      userText := userText # " " # Nat.toText(cm.id) # ":" # statusText(cm.status) # ":" # Nat.toText(cm.progress) # "%"
     };
     return userText # " ]";
   };
