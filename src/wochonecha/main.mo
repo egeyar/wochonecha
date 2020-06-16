@@ -41,13 +41,43 @@ actor Wochonecha {
         friends = userData.friends;
       };
       userDb.update(updatedUserData);
-    "accepted challenge: " # userDataAsText(updatedUserData)
+    "accepted challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
+  };
+
+  public shared(msg) func completeChallenge(challengeId : ChallengeId) : async Text {
+    let maybeUserData : ?UserData = userDb.findById(msg.caller);
+    if (Option.isNull(maybeUserData)) {
+      return "user not registered" 
+    };
+
+    let userData = Option.unwrap(maybeUserData);
+    var remainingChallenges : [ChallengeId] = [];
+    var foundAccepted = false;
+    for (cId in userData.acceptedChallenges.vals()) {
+      if (challengeId == cId) {
+        foundAccepted := true;
+      } else {
+        remainingChallenges := Array.append<ChallengeId>(remainingChallenges, [cId]);
+      }
+    };
+    if (not foundAccepted) {
+      return "challenge " # Nat.toText(challengeId) # " was not accepted yet, so it cannot be completed"
+    };
+    let updatedUserData : UserData = {
+        id = userData.id;
+        name = userData.name;
+        acceptedChallenges = remainingChallenges;
+        completedChallenges = Array.append<ChallengeId>(userData.completedChallenges, [challengeId]);
+        friends = userData.friends;
+      };
+      userDb.update(updatedUserData);
+    "completed challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
   };
 
   public query func getUser(username : Text) : async Text {
     let users = userDb.findByName(username);
-    let userId  : Text = Nat.toText(Nat.fromWord32(Principal.hash(users[0].id)));
-     "querying for user " # username # ": " # userId
+    let userDataText = userDataAsText(users[0]);
+     "querying for user " # username # ":\n" # userDataText
   };
 
   public shared(msg) func createChallenge(title: Text, description: Text) : async Text {
@@ -73,9 +103,14 @@ actor Wochonecha {
   func userDataAsText(userData : UserData) : Text {
     let userId : Text = Nat.toText(Nat.fromWord32(Principal.hash(userData.id)));
     var userText : Text = "id: " # userId # ", name: " # userData.name # ", accepted: [";
-    for (challenge in userData.acceptedChallenges.vals()) {
-      userText := "" # userText # Nat.toText(challenge) # " ";
+    for (challengeId in userData.acceptedChallenges.vals()) {
+      userText := userText # " " # Nat.toText(challengeId);
     };
+    userText := userText # " ], completed: [";
+    for (challengeId in userData.completedChallenges.vals()) {
+      userText := userText # " " # Nat.toText(challengeId);
+    };
+    return userText # " ]";
   };
 
   func challengeAsText(challenge: Challenge.Challenge) : Text {
