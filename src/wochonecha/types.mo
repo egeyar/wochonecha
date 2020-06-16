@@ -5,7 +5,7 @@ module {
   public type ChallengeId = Nat;
 
   public type ChallengeStatus = {
-      #accepted; #completed; #expired
+      #accepted; #inprogress; #completed; #expired
   };
 
   public type ChallengeMetadata = {

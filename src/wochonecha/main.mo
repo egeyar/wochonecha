@@ -37,6 +37,7 @@ actor Wochonecha {
       case (#accepted, #accepted) true;
       case (#completed, #completed) true;
       case (#expired, #expired) true;
+      case (#inprogress, #inprogress) true;
       case _ false;
     }
   };
@@ -46,12 +47,15 @@ actor Wochonecha {
       case (#accepted) "accepted";
       case (#completed) "completed";
       case (#expired) "expired";
+      case (#inprogress) "inprogress";
     }
   };
 
-  func isAccepted(cId: ChallengeId, cMetadata: [ChallengeMetadata]): Bool {
-    func accepted(cm: ChallengeMetadata): Bool { cm.id == cId and eqStatus(cm.status, #accepted)};
-    switch (Array.find<ChallengeMetadata>(accepted, cMetadata)) {
+  func isAcceptedOrInProgress(cId: ChallengeId, cMetadata: [ChallengeMetadata]): Bool {
+    func isOn(cm: ChallengeMetadata): Bool {
+      cm.id == cId and ( eqStatus(cm.status, #accepted) or eqStatus(cm.status, #inprogress))
+    };
+    switch (Array.find<ChallengeMetadata>(isOn, cMetadata)) {
       case (null) { false };
       case (_) { true };
     };
@@ -78,7 +82,7 @@ actor Wochonecha {
     let challenge = Option.unwrap(maybechallenge);
 
     // Verify that the user has not already accepted the challenge
-    if (isAccepted(challengeId, userData.challenges)) {
+    if (isAcceptedOrInProgress(challengeId, userData.challenges)) {
       return "The challenge " # Nat.toText(challengeId) # " is already accepted by user " # userData.name
     };
 
@@ -106,12 +110,12 @@ actor Wochonecha {
     };
 
     let userData = Option.unwrap(maybeUserData);
-    if (not isAccepted(challengeId, userData.challenges)) {
+    if (not isAcceptedOrInProgress(challengeId, userData.challenges)) {
       return "challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
     };
     var cs : [ChallengeMetadata] = [];
     for (cm in userData.challenges.vals()) {
-      if (cm.id == challengeId and eqStatus(cm.status, #accepted)) {
+      if (cm.id == challengeId and ( eqStatus(cm.status, #accepted) or eqStatus(cm.status, #inprogress))) {
         let completed : ChallengeMetadata = {
           id = cm.id;
           status = #completed;
@@ -141,8 +145,8 @@ actor Wochonecha {
   };
 
   public shared(msg) func setProgress(challengeId: ChallengeId, newProgress: Nat) : async Text {
-    if (newProgress > 100) {
-      return "progress must be in the range 0..100";
+    if (newProgress >= 100) {
+      return "progress must be less than 100%";
     };
     let maybeUserData : ?UserData = userDb.findById(msg.caller);
     if (Option.isNull(maybeUserData)) {
@@ -150,15 +154,16 @@ actor Wochonecha {
     };
 
     let userData = Option.unwrap(maybeUserData);
-    if (not isAccepted(challengeId, userData.challenges)) {
+    if (not isAcceptedOrInProgress(challengeId, userData.challenges)) {
       return "challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
     };
     var cs : [ChallengeMetadata] = [];
     for (cm in userData.challenges.vals()) {
-      if (cm.id == challengeId and eqStatus(cm.status, #accepted)) {
+      if (cm.id == challengeId
+          and ( eqStatus(cm.status, #accepted) or eqStatus(cm.status, #inprogress))) {
         let completed : ChallengeMetadata = {
           id = cm.id;
-          status = #completed;
+          status = #inprogress;
           completionDeadline = 0;  // TODO
           progress = newProgress;
         };
