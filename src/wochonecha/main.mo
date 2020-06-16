@@ -22,16 +22,6 @@ actor Wochonecha {
     public func get_count() : Nat { count };
   };
 
-  func userDataAsText(userData : UserData) : Text {
-    let userId : Text = Nat.toText(Nat.fromWord32(Principal.hash(userData.id)));
-    var userText : Text = "id: " # userId # ", name: " # userData.name # ", accepted: [";
-    for (challenge in userData.acceptedChallenges.vals()) {
-      userText := "" # userText # Nat.toText(challenge) # " ";
-    };
-    return userText # "]";
-  };
-
-
   public shared(msg) func createUser(username: Text) : async Text {
     let userData : UserData = userDb.createOrReturn(msg.caller, username);
     "user: id = " # Nat.toText(Nat.fromWord32(Principal.hash(msg.caller))) # ", username = " # userData.name
@@ -77,10 +67,18 @@ actor Wochonecha {
       return "A challenge with challenge id " # Nat.toText(challenge_id) # " does not exist";
     };
     let challenge = Option.unwrap(maybechallenge);
-    textifyChallenge(challenge)
+    challengeAsText(challenge)
   };
 
-  func textifyChallenge(challenge: Challenge.Challenge) : Text {
+  func userDataAsText(userData : UserData) : Text {
+    let userId : Text = Nat.toText(Nat.fromWord32(Principal.hash(userData.id)));
+    var userText : Text = "id: " # userId # ", name: " # userData.name # ", accepted: [";
+    for (challenge in userData.acceptedChallenges.vals()) {
+      userText := "" # userText # Nat.toText(challenge) # " ";
+    };
+  };
+
+  func challengeAsText(challenge: Challenge.Challenge) : Text {
     let id = Nat.toText(challenge.get_id());
     let username = Option.unwrap(userDb.findById(challenge.get_creator())).name;
     let acception_count = Nat.toText(challenge.get_acception_count());
@@ -88,4 +86,14 @@ actor Wochonecha {
     "Challenge " # id # ":\nTitle: " # challenge.get_title() # "\nDescripton: " # challenge.get_description()
       # "\nCreated by " # username # "\nAccepted " # acception_count # " times\nCompleted " # completion_count # " times"
   };
+
+  func challengeIdArrayAsText(challenge_ids: [Challenge.ChallengeId]) : Text {
+    var text : Text = "";
+    for (challenge_id in challenge_ids.vals()) {
+      let challenge = Option.unwrap(challengeDB.get(challenge_id));
+      text := text # challengeAsText(challenge) # "\n";
+    };
+    text
+  };
+
 };
