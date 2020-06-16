@@ -1,19 +1,15 @@
 # wochonecha
 
-Welcome to your new wochonecha project and to the internet computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
+Hey there! Welcome to the github repo of our project for the first internal hackathon held by Dfinity Foundation.
 
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+We imagined Wochenecha as a social platform to get out of our comfort zone and complete challenges. The challenges could be picked up from the challenge library, or you can create your own! You can set the progress on challenge you accept and eventually mark them complete. What's best is that you can receive challenges from friends, or challenge them! Let's get better, together, today!
 
-To learn more before you start working with wochonecha, see the following documentation available online:
+Here is a more detailed description of Wochonecha:
+https://docs.google.com/document/d/1820D5VJJMyk7WfsRyxFH91K4uuMSyvpN8ropqEAKWbM
+
+To learn more about how you can develop your own cool project on Internet Computer, go ahead and check out the following documentation:
 
 - [Quick Start](https://sdk.dfinity.org/developers-guide/quickstart.html)
 - [Developer's Guide](https://sdk.dfinity.org/developers-guide)
 - [Language Reference](https://sdk.dfinity.org/language-guide)
 
-If you want to start working on your project right away, you might want to try the following commands:
-
-```bash
-cd wochonecha/
-dfx help
-dfx config --help
-```
