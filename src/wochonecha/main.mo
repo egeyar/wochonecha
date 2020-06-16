@@ -260,7 +260,7 @@ actor Wochonecha {
 
   func userDataAsText(userData : UserData) : Text {
     let userId : Text = Nat.toText(Nat.fromWord32(Principal.hash(userData.id)));
-    var userText : Text = "id: " # userId # ", name: " # userData.name # ", accepted: [";
+    var userText : Text = "id: " # userId # ", name: " # userData.name # ", challenges: [";
     for (cm in userData.challenges.vals()) {
       userText := userText # " " # Nat.toText(cm.id) # ":" # statusText(cm.status) # ":" # Nat.toText(cm.progress) # "%"
     };
