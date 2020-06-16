@@ -28,11 +28,27 @@ actor Wochonecha {
   };
 
   public shared(msg) func acceptChallenge(challengeId : ChallengeId) : async Text {
+    // Verify the user
     let maybeUserData : ?UserData = userDb.findById(msg.caller);
     if (Option.isNull(maybeUserData)) {
       return "user not registered" 
     };
     let userData = Option.unwrap(maybeUserData);
+
+    // Verify the challenge
+    let maybechallenge : ?Challenge.Challenge = challengeDB.get(challengeId);
+    if (Option.isNull(maybechallenge)) {
+      return "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist";
+    };
+    let challenge = Option.unwrap(maybechallenge);
+
+    // Verify that the user has not already accepted the challenge
+    for (id in userData.acceptedChallenges.vals()) {
+      if (id == challengeId) {
+        return "The challenge " # Nat.toText(challengeId) # " is already accepted by user " # userData.name
+      };
+    };
+
     let updatedUserData : UserData = {
         id = userData.id;
         name = userData.name;
@@ -40,7 +56,8 @@ actor Wochonecha {
         completedChallenges = userData.completedChallenges;
         friends = userData.friends;
       };
-      userDb.update(updatedUserData);
+    userDb.update(updatedUserData);
+    challengeDB.accepted(challengeId : ChallengeId);
     "accepted challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
   };
 
@@ -70,7 +87,7 @@ actor Wochonecha {
         completedChallenges = Array.append<ChallengeId>(userData.completedChallenges, [challengeId]);
         friends = userData.friends;
       };
-      userDb.update(updatedUserData);
+    userDb.update(updatedUserData);
     "completed challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
   };
 
