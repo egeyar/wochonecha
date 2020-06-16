@@ -6,7 +6,6 @@ import Types "./types";
 import Array "mo:base/Array";
 
 import Challenge "./challenge";
-import AcceptedChallenge "./acceptedchallenge";
 import ChallengeDB "./challengedb";
 import DefaultChallenges "./defaultchallenges";
 
