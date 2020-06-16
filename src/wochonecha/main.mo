@@ -8,6 +8,7 @@ import Array "mo:base/Array";
 import Challenge "./challenge";
 import AcceptedChallenge "./acceptedchallenge";
 import ChallengeDB "./challengedb";
+import DefaultChallenges "./defaultchallenges";
 
 actor Wochonecha {
   type ChallengeId = Types.ChallengeId;
@@ -24,6 +25,12 @@ actor Wochonecha {
     public func get_new_id() : Nat { let id = count; count += 1; id };
     public func get_count() : Nat { count };
   };
+
+  for (tuple in DefaultChallenges.challenges.vals())
+    {
+      challengeDB.add(
+        Challenge.Challenge(challengeCounter.get_new_id(), tuple.0, tuple.1, null));
+    };
 
   func eqStatus(s1: ChallengeStatus, s2 : ChallengeStatus) : Bool {
     switch (s1, s2) {
@@ -49,8 +56,6 @@ actor Wochonecha {
       case (_) { true };
     };
   };
-
-
 
   public shared(msg) func createUser(username: Text) : async Text {
     let userData : UserData = userDb.createOrReturn(msg.caller, username);
