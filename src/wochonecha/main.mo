@@ -12,6 +12,7 @@ import ChallengeDB "./challengedb";
 actor Wochonecha {
   type ChallengeId = Types.ChallengeId;
   type UserData = Types.UserData;
+  type UserId = Types.UserId;
 
   var userDb : User.UserDb = User.UserDb();
   var challengeDB: ChallengeDB.ChallengeDB = ChallengeDB.ChallengeDB();
@@ -103,7 +104,7 @@ actor Wochonecha {
       return "you need to be a registered user to create challenges"
     };
     let username = Option.unwrap(maybeUserData).name;
-    let challenge = Challenge.Challenge(challengeCounter.get_new_id(), title, description, msg.caller);
+    let challenge = Challenge.Challenge(challengeCounter.get_new_id(), title, description, ?msg.caller);
     challengeDB.add(challenge);
     "A new challenge with id " # Nat.toText(challenge.get_id()) # " is created by user " # username
   };
@@ -132,11 +133,11 @@ actor Wochonecha {
 
   func challengeAsText(challenge: Challenge.Challenge) : Text {
     let id = Nat.toText(challenge.get_id());
-    let username = Option.unwrap(userDb.findById(challenge.get_creator())).name;
+    let creator = getUsernameFromOption(challenge.get_creator());
     let acception_count = Nat.toText(challenge.get_acception_count());
     let completion_count = Nat.toText(challenge.get_completion_count());
     "Challenge " # id # ":\nTitle: " # challenge.get_title() # "\nDescripton: " # challenge.get_description()
-      # "\nCreated by " # username # "\nAccepted " # acception_count # " times\nCompleted " # completion_count # " times"
+      # "\nCreated by " # creator # "\nAccepted " # acception_count # " times\nCompleted " # completion_count # " times"
   };
 
   func challengeIdArrayAsText(challenge_ids: [Challenge.ChallengeId]) : Text {
@@ -147,5 +148,13 @@ actor Wochonecha {
     };
     text
   };
+
+  func getUsernameFromOption(maybe_user_id : ? UserId) : Text {
+    switch (maybe_user_id) {
+      case null return "Wochonecha";
+      case (?user_id) return (Option.unwrap(userDb.findById(user_id)).name);
+    };
+  }
+    
 
 };

@@ -14,7 +14,7 @@ module {
     id: ChallengeId,
     title: Text,
     description: Text,
-    creator: UserId) {
+    creator: ?UserId) {
 
     var acception_count: Nat = 0;
     var completion_count: Nat = 0;
@@ -31,7 +31,7 @@ module {
       description
     };
 
-    public func get_creator() : UserId {
+    public func get_creator() : ?UserId {
       creator
     };
 
