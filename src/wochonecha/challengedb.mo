@@ -52,6 +52,12 @@ module {
       challenge.incr_acception_count();
       hashMap.set(challenge.get_id(), challenge);
     };
+
+    public func completed(challenge_id: ChallengeId) {
+      let challenge = Option.unwrap(hashMap.get(challenge_id));
+      challenge.incr_completion_count();
+      hashMap.set(challenge.get_id(), challenge);
+    };
   };
 
   func isEq(x: ChallengeId, y: ChallengeId): Bool { x == y };

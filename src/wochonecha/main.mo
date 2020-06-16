@@ -130,6 +130,7 @@ actor Wochonecha {
         friends = userData.friends;
       };
     userDb.update(updatedUserData);
+    challengeDB.completed(challengeId : ChallengeId);
     "completed challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
   };
 
