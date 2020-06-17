@@ -16,6 +16,16 @@
         "src/wochonecha_assets/assets"
       ],
       "type": "assets"
+    },
+    "wochonecha_candid": {
+      "dependencies": [
+        "wochonecha"
+      ],
+      "frontend": {
+        "entrypoint": "src/wochonecha_candid/public/index.js",
+        "output": "canisters/wochonecha_candid/assets"
+      },
+      "type": "assets"
     }
   },
   "defaults": {
