@@ -16,10 +16,10 @@ actor Wochonecha {
   type UserData = Types.UserData;
   type UserId = Types.UserId;
 
-  var userDb : User.UserDb = User.UserDb();
-  var challengeDB: ChallengeDB.ChallengeDB = ChallengeDB.ChallengeDB();
+  flexible var userDb : User.UserDb = User.UserDb();
+  flexible var challengeDB: ChallengeDB.ChallengeDB = ChallengeDB.ChallengeDB();
 
-  object challengeCounter = {
+  flexible object challengeCounter = {
     var count = 0;
     public func get_new_id() : Nat { let id = count; count += 1; id };
     public func get_count() : Nat { count };

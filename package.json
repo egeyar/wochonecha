@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@dfinity/agent": "/home/egeyar/.cache/dfinity/versions/0.5.8/js-user-library",
-    "terser-webpack-plugin": "2.2.2",
+    "terser-webpack-plugin": "^2.3.7",
     "webpack": "4.41.3",
     "webpack-cli": "3.3.10"
   }

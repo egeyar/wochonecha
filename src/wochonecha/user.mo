@@ -20,13 +20,13 @@ module {
         return Option.unwrap(maybeUser)
       };
       let userData = makeUserData(userId, username);
-      ignore db.set(userId, userData);
+      db.set(userId, userData);
       return userData;
     };
 
     public func update(userData: UserData) {
       let userId: UserId = userData.id;
-      ignore db.set(userId, userData);
+      db.set(userId, userData);
     };
 
     public func findById(userId: UserId): ?UserData {
