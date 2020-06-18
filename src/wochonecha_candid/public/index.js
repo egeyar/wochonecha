@@ -79,7 +79,7 @@ const CSS = `
 `;
 
 const HTML = `
-    <h1 id="title">Service</h1>
+    <h1 id="title">Welcome to DUAL!</h1>
     <div>
       This service has the following methods:
       <ul id="methods">

@@ -360,7 +360,7 @@ actor Wochonecha {
 
   func getUsernameFromOption(maybe_user_id : ? UserId) : Text {
     switch (maybe_user_id) {
-      case null return "Wochonecha";
+      case null return "DUAL";
       case (?user_id) return (Option.unwrap(userDb.findById(user_id)).name);
     };
   }
