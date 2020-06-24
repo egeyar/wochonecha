@@ -124,36 +124,20 @@ actor Wochonecha {
 
     let maybestatus = getStatusIfExists(challengeId, userData.challenges);
     switch maybestatus {
-      case (?#accepted) {
+      case (?#accepted or ?#inprogress) {
         return "The challenge " # Nat.toText(challengeId) # " is already accepted by user " # userData.name
       };
 
-      case (?#inprogress) {
-        return "The user " # userData.name # " is already making progress on the challenge " # Nat.toText(challengeId)
-      };
-
-      case null {
+      case (null or ?#completed or ?#expired) {
         userData := addNewChallenge(userData, newMetadata);
-        userDb.update(userData);
-      };
-
-      case (?#completed) {
-        userData := addNewChallenge(userData, newMetadata);
-        userDb.update(userData);
-      };
-
-      case (?#expired) {
-        //TODO: to be decided.
-        userData := addNewChallenge(userData, newMetadata);
-        userDb.update(userData);
       };
 
       case (?#suggestion) {
         userData := replaceExistingChallenge(userData, newMetadata, #suggestion);
-        userDb.update(userData);
       };
     };
 
+    userDb.update(userData);
     challengeDB.accepted(challengeId : ChallengeId);
     "accepted challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(userData)
   };
@@ -191,24 +175,11 @@ actor Wochonecha {
         return "The challenge " # Nat.toText(challengeId) # " is already suggested to user " # username
       };
 
-      case (?#accepted) {
+      case (?#accepted or ?#inprogress) {
         return "The challenge " # Nat.toText(challengeId) # " is already accepted by user " # username
       };
 
-      case (?#inprogress) {
-        return "The user " # username # " is already making progress on the challenge " # Nat.toText(challengeId)
-      };
-
-      case (?#completed) {
-        userDb.update(addNewChallenge(userData, newMetadata));
-      };
-
-      case (?#expired) {
-        //TODO: To be decided...
-        userDb.update(addNewChallenge(userData, newMetadata));
-      };
-
-      case (null) {
+      case (?#completed or ?#expired or null) {
         userDb.update(addNewChallenge(userData, newMetadata));
       };
     };
@@ -231,19 +202,7 @@ actor Wochonecha {
 
     let maybestatus = getStatusIfExists(challengeId, userData.challenges);
     switch maybestatus {
-      case (?#suggestion) {
-        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
-      };
-
-      case (?#expired) {
-        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
-      };
-
-      case(?#completed) {
-        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
-      };
-
-      case(null) {
+      case (null or ?#suggestion or ?#expired or ?#completed) {
         return "The challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
       };
 
@@ -291,19 +250,7 @@ actor Wochonecha {
 
     let maybestatus = getStatusIfExists(challengeId, userData.challenges);
     switch maybestatus {
-      case (?#suggestion) {
-        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
-      };
-
-      case (?#expired) {
-        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
-      };
-
-      case(?#completed) {
-        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
-      };
-
-      case(null) {
+      case (null or ?#suggestion or ?#expired or ?#completed) {
         return "The challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
       };
 
