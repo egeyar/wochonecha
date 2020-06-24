@@ -98,24 +98,22 @@ actor Wochonecha {
   };
 
   public shared(msg) func createUser(username: Text) : async Text {
-    let userData : UserData = userDb.createOrReturn(msg.caller, username);
+    var userData : UserData = userDb.createOrReturn(msg.caller, username);
     "user: id = " # Nat.toText(Nat.fromWord32(Principal.hash(msg.caller))) # ", username = " # userData.name
   };
 
   public shared(msg) func acceptChallenge(challengeId : ChallengeId) : async Text {
     // Verify the user
-    let maybeUserData : ?UserData = userDb.findById(msg.caller);
-    if (Option.isNull(maybeUserData)) {
-      return "user not registered" 
+    var userData = switch (userDb.findById(msg.caller)) {
+      case (null) { return "user not registered" };
+      case (?user) user
     };
-    let userData = Option.unwrap(maybeUserData);
 
     // Verify the challenge
-    let maybechallenge : ?Challenge.Challenge = challengeDB.get(challengeId);
-    if (Option.isNull(maybechallenge)) {
-      return "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist";
+    let challenge = switch (challengeDB.get(challengeId)) {
+      case (null) { return "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist" };
+      case (?ch) ch
     };
-    let challenge = Option.unwrap(maybechallenge);
 
     let newMetadata : ChallengeMetadata = {
       id = challengeId;
@@ -135,40 +133,43 @@ actor Wochonecha {
       };
 
       case null {
-        userDb.update(addNewChallenge(userData, newMetadata));
+        userData := addNewChallenge(userData, newMetadata);
+        userDb.update(userData);
       };
 
       case (?#completed) {
-        userDb.update(addNewChallenge(userData, newMetadata));
+        userData := addNewChallenge(userData, newMetadata);
+        userDb.update(userData);
       };
 
       case (?#expired) {
         //TODO: to be decided.
-        userDb.update(addNewChallenge(userData, newMetadata));
+        userData := addNewChallenge(userData, newMetadata);
+        userDb.update(userData);
       };
 
       case (?#suggestion) {
-        userDb.update(replaceExistingChallenge(userData, newMetadata, #suggestion));
+        userData := replaceExistingChallenge(userData, newMetadata, #suggestion);
+        userDb.update(userData);
       };
     };
 
     challengeDB.accepted(challengeId : ChallengeId);
-    "accepted challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(Option.unwrap(userDb.findById(msg.caller)))
+    "accepted challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(userData)
   };
 
   public shared(msg) func suggestChallenge(username: Text, challengeId: ChallengeId) : async Text {
     // Verify the user
-    let maybeUserData : ?UserData = userDb.findById(msg.caller);
-    if (Option.isNull(maybeUserData)) {
-      return "Please register to be able to suggest challenges to others";
+    switch (userDb.findById(msg.caller)) {
+      case (null) { return "Please register to be able to suggest challenges to others" };
+      case (?user) {}
     };
 
     // Verify the challenge
-    let maybechallenge : ?Challenge.Challenge = challengeDB.get(challengeId);
-    if (Option.isNull(maybechallenge)) {
-      return "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist";
+    let challenge = switch (challengeDB.get(challengeId)) {
+      case (null) { return "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist" };
+      case (?ch) ch
     };
-    let challenge = Option.unwrap(maybechallenge);
 
     //Verify the recipient
     let users = userDb.findByName(username);
@@ -215,12 +216,11 @@ actor Wochonecha {
   };
 
   public shared(msg) func completeChallenge(challengeId : ChallengeId) : async Text {
-    let maybeUserData : ?UserData = userDb.findById(msg.caller);
-    if (Option.isNull(maybeUserData)) {
-      return "user not registered" 
+    // Verify the user
+    var userData = switch (userDb.findById(msg.caller)) {
+      case (null) { return "user not registered" };
+      case (?user) user
     };
-
-    let userData = Option.unwrap(maybeUserData);
 
     let newMetadata : ChallengeMetadata = {
       id = challengeId;
@@ -248,16 +248,18 @@ actor Wochonecha {
       };
 
       case (?#accepted) {
-        userDb.update(replaceExistingChallenge(userData, newMetadata, #accepted));
+        userData := replaceExistingChallenge(userData, newMetadata, #accepted);
+        userDb.update(userData);
       };
 
       case (?#inprogress) {
-        userDb.update(replaceExistingChallenge(userData, newMetadata, #inprogress));
+        userData := replaceExistingChallenge(userData, newMetadata, #inprogress);
+        userDb.update(userData);
       };
     };
 
     challengeDB.completed(challengeId : ChallengeId);
-    "completed challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(Option.unwrap(userDb.findById(msg.caller)))
+    "completed challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(userData)
   };
 
   public query func getUser(username : Text) : async Text {
@@ -274,11 +276,11 @@ actor Wochonecha {
       return "progress must be less than 100%";
     };
 
-    let maybeUserData : ?UserData = userDb.findById(msg.caller);
-    if (Option.isNull(maybeUserData)) {
-      return "user not registered" 
+    // Verify the user
+    var userData = switch (userDb.findById(msg.caller)) {
+      case (null) { return "user not registered" };
+      case (?user) user
     };
-    let userData = Option.unwrap(maybeUserData);
 
     let newMetadata : ChallengeMetadata = {
       id = challengeId;
@@ -306,43 +308,43 @@ actor Wochonecha {
       };
 
       case (?#accepted) {
-        userDb.update(replaceExistingChallenge(userData, newMetadata, #accepted));
+        userData := replaceExistingChallenge(userData, newMetadata, #accepted);
+        userDb.update(userData);
       };
 
       case (?#inprogress) {
-        userDb.update(replaceExistingChallenge(userData, newMetadata, #inprogress));
+        userData := replaceExistingChallenge(userData, newMetadata, #inprogress);
+        userDb.update(userData);
       };
     };
-    "updated progress for challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(Option.unwrap(userDb.findById(msg.caller)))
+    "updated progress for challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(userData)
   };
 
   public shared(msg) func createChallenge(title: Text, description: Text) : async Text {
-    let maybeUserData : ?UserData = userDb.findById(msg.caller);
-    if (Option.isNull(maybeUserData)) {
-      return "you need to be a registered user to create challenges"
+    // Verify the user
+    let userData = switch (userDb.findById(msg.caller)) {
+      case (null) { return "you need to be a registered user to create challenges" };
+      case (?user) user
     };
-    let username = Option.unwrap(maybeUserData).name;
+    let username = userData.name;
+
     let challenge = Challenge.Challenge(challengeCounter.get_new_id(), title, description, ?msg.caller);
     challengeDB.add(challenge);
     "A new challenge with id " # Nat.toText(challenge.get_id()) # " is created by user " # username
   };
 
   public func pickMeAChallenge() : async Text {
-    let maybechallenge : ?Challenge.Challenge = challengeDB.get_any();
-    if (Option.isNull(maybechallenge)) {
-      return "There are no challenges in the database";
-    };
-    let challenge = Option.unwrap(maybechallenge);
-    challengeAsText(challenge)
+    switch (challengeDB.get_any()) {
+      case (null) { "There are no challenges in the database" };
+      case (?challenge) { challengeAsText(challenge) }
+    }
   };
 
-  public query func displayChallenge(challenge_id: ChallengeId) : async Text {
-    let maybechallenge : ?Challenge.Challenge = challengeDB.get(challenge_id);
-    if (Option.isNull(maybechallenge)) {
-      return "A challenge with challenge id " # Nat.toText(challenge_id) # " does not exist";
-    };
-    let challenge = Option.unwrap(maybechallenge);
-    challengeAsText(challenge)
+  public query func displayChallenge(challengeId: ChallengeId) : async Text {
+    switch (challengeDB.get(challengeId)) {
+      case (null) { "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist" };
+      case (?challenge) { challengeAsText(challenge) }
+    }
   };
 
   func userDataAsText(userData : UserData) : Text {
@@ -374,10 +376,13 @@ actor Wochonecha {
 
   func getUsernameFromOption(maybe_user_id : ? UserId) : Text {
     switch (maybe_user_id) {
-      case null return "DUAL";
-      case (?user_id) return (Option.unwrap(userDb.findById(user_id)).name);
-    };
+      case null { "DUAL" };
+      case (?user_id) {
+        switch (userDb.findById(user_id)) {
+          case (null) { "DUAL" };
+          case (?user) { user.name };
+        }
+      }
+    }
   }
-    
-
 };
