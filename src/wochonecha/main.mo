@@ -19,12 +19,14 @@ actor Wochonecha {
   flexible var userDb : User.UserDb = User.UserDb();
   flexible var challengeDB: ChallengeDB.ChallengeDB = ChallengeDB.ChallengeDB();
 
+  // The following generates IDs for challenges.
   flexible object challengeCounter = {
     var count = 0;
     public func get_new_id() : Nat { let id = count; count += 1; id };
     public func get_count() : Nat { count };
   };
 
+  // Populate the challenge database with some initial challenges.
   for (tuple in DefaultChallenges.challenges.vals())
     {
       challengeDB.add(
@@ -52,6 +54,7 @@ actor Wochonecha {
     }
   };
 
+  // Add this challenge metadata to the given user's challenges.
   func addNewChallenge(userdata : UserData, new_cm: ChallengeMetadata) : UserData {
     let updated_userdata : UserData = {
       id = userdata.id;
@@ -63,6 +66,7 @@ actor Wochonecha {
     updated_userdata
   };
 
+  // If the user has a challenge metadata with the given id and status, replace it with the given metadata.
   func replaceExistingChallenge(userdata : UserData, new_cm: ChallengeMetadata, oldStatus: ChallengeStatus) : UserData {
     var cs : [ChallengeMetadata] = [];
     for (cm in userdata.challenges.vals()) {
@@ -81,16 +85,6 @@ actor Wochonecha {
     };
 
     updated_userdata;
-  };
-
-  func isAcceptedOrInProgress(cId: ChallengeId, cMetadata: [ChallengeMetadata]): Bool {
-    func isOn(cm: ChallengeMetadata): Bool {
-      cm.id == cId and ( eqStatus(cm.status, #accepted) or eqStatus(cm.status, #inprogress))
-    };
-    switch (Array.find<ChallengeMetadata>(isOn, cMetadata)) {
-      case (null) { false };
-      case (_) { true };
-    };
   };
 
   func getStatusIfExists (challenge_id: ChallengeId, cm_array: [ChallengeMetadata]) : ?ChallengeStatus {
@@ -123,7 +117,7 @@ actor Wochonecha {
     };
     let challenge = Option.unwrap(maybechallenge);
 
-    let newChallenge : ChallengeMetadata = {
+    let newMetadata : ChallengeMetadata = {
       id = challengeId;
       status = #accepted;
       completionDeadline = 0;  // TODO
@@ -141,20 +135,20 @@ actor Wochonecha {
       };
 
       case null {
-        userDb.update(addNewChallenge(userData, newChallenge));
+        userDb.update(addNewChallenge(userData, newMetadata));
       };
 
       case (?#completed) {
-        userDb.update(addNewChallenge(userData, newChallenge));
+        userDb.update(addNewChallenge(userData, newMetadata));
       };
 
       case (?#expired) {
         //TODO: to be decided.
-        userDb.update(addNewChallenge(userData, newChallenge));
+        userDb.update(addNewChallenge(userData, newMetadata));
       };
 
       case (?#suggestion) {
-        userDb.update(replaceExistingChallenge(userData, newChallenge, #suggestion));
+        userDb.update(replaceExistingChallenge(userData, newMetadata, #suggestion));
       };
     };
 
@@ -183,7 +177,7 @@ actor Wochonecha {
     };
     let userData = users[0];
 
-    let newChallenge : ChallengeMetadata = {
+    let newMetadata : ChallengeMetadata = {
       id = challengeId;
       status = #suggestion;
       completionDeadline = 0;  // TODO
@@ -205,16 +199,16 @@ actor Wochonecha {
       };
 
       case (?#completed) {
-        userDb.update(addNewChallenge(userData, newChallenge));
+        userDb.update(addNewChallenge(userData, newMetadata));
       };
 
       case (?#expired) {
         //TODO: To be decided...
-        userDb.update(addNewChallenge(userData, newChallenge));
+        userDb.update(addNewChallenge(userData, newMetadata));
       };
 
       case (null) {
-        userDb.update(addNewChallenge(userData, newChallenge));
+        userDb.update(addNewChallenge(userData, newMetadata));
       };
     };
     "suggested challenge " # Nat.toText(challengeId) # " to user " # username
@@ -227,32 +221,43 @@ actor Wochonecha {
     };
 
     let userData = Option.unwrap(maybeUserData);
-    if (not isAcceptedOrInProgress(challengeId, userData.challenges)) {
-      return "challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
+
+    let newMetadata : ChallengeMetadata = {
+      id = challengeId;
+      status = #completed;
+      completionDeadline = 0;  // TODO
+      progress = 100;
     };
-    var cs : [ChallengeMetadata] = [];
-    for (cm in userData.challenges.vals()) {
-      if (cm.id == challengeId and ( eqStatus(cm.status, #accepted) or eqStatus(cm.status, #inprogress))) {
-        let completed : ChallengeMetadata = {
-          id = cm.id;
-          status = #completed;
-          completionDeadline = 0;  // TODO
-          progress = 100;
-        };
-        cs := Array.append<ChallengeMetadata>(cs, [completed]);
-      } else {
-        cs := Array.append<ChallengeMetadata>(cs, [cm]);
-      }
-    };
-    let updatedUserData : UserData = {
-        id = userData.id;
-        name = userData.name;
-        challenges = cs;
-        friends = userData.friends;
+
+    let maybestatus = getStatusIfExists(challengeId, userData.challenges);
+    switch maybestatus {
+      case (?#suggestion) {
+        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
       };
-    userDb.update(updatedUserData);
+
+      case (?#expired) {
+        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
+      };
+
+      case(?#completed) {
+        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
+      };
+
+      case(null) {
+        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so it cannot be completed"
+      };
+
+      case (?#accepted) {
+        userDb.update(replaceExistingChallenge(userData, newMetadata, #accepted));
+      };
+
+      case (?#inprogress) {
+        userDb.update(replaceExistingChallenge(userData, newMetadata, #inprogress));
+      };
+    };
+
     challengeDB.completed(challengeId : ChallengeId);
-    "completed challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
+    "completed challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(Option.unwrap(userDb.findById(msg.caller)))
   };
 
   public query func getUser(username : Text) : async Text {
@@ -268,38 +273,47 @@ actor Wochonecha {
     if (newProgress >= 100) {
       return "progress must be less than 100%";
     };
+
     let maybeUserData : ?UserData = userDb.findById(msg.caller);
     if (Option.isNull(maybeUserData)) {
       return "user not registered" 
     };
-
     let userData = Option.unwrap(maybeUserData);
-    if (not isAcceptedOrInProgress(challengeId, userData.challenges)) {
-      return "challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
+
+    let newMetadata : ChallengeMetadata = {
+      id = challengeId;
+      status = #inprogress;
+      completionDeadline = 0;  // TODO
+      progress = newProgress;
     };
-    var cs : [ChallengeMetadata] = [];
-    for (cm in userData.challenges.vals()) {
-      if (cm.id == challengeId
-          and ( eqStatus(cm.status, #accepted) or eqStatus(cm.status, #inprogress))) {
-        let completed : ChallengeMetadata = {
-          id = cm.id;
-          status = #inprogress;
-          completionDeadline = 0;  // TODO
-          progress = newProgress;
-        };
-        cs := Array.append<ChallengeMetadata>(cs, [completed]);
-      } else {
-        cs := Array.append<ChallengeMetadata>(cs, [cm]);
-      }
-    };
-    let updatedUserData : UserData = {
-        id = userData.id;
-        name = userData.name;
-        challenges = cs;
-        friends = userData.friends;
+
+    let maybestatus = getStatusIfExists(challengeId, userData.challenges);
+    switch maybestatus {
+      case (?#suggestion) {
+        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
       };
-    userDb.update(updatedUserData);
-    "updated progress for challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(updatedUserData)
+
+      case (?#expired) {
+        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
+      };
+
+      case(?#completed) {
+        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
+      };
+
+      case(null) {
+        return "The challenge " # Nat.toText(challengeId) # " is not accepted, so cannot change progress"
+      };
+
+      case (?#accepted) {
+        userDb.update(replaceExistingChallenge(userData, newMetadata, #accepted));
+      };
+
+      case (?#inprogress) {
+        userDb.update(replaceExistingChallenge(userData, newMetadata, #inprogress));
+      };
+    };
+    "updated progress for challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(Option.unwrap(userDb.findById(msg.caller)))
   };
 
   public shared(msg) func createChallenge(title: Text, description: Text) : async Text {
