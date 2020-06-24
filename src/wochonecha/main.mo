@@ -365,15 +365,6 @@ actor Wochonecha {
       # "\nCreated by " # creator # "\nAccepted " # acception_count # " times\nCompleted " # completion_count # " times"
   };
 
-  func challengeIdArrayAsText(challenge_ids: [Challenge.ChallengeId]) : Text {
-    var text : Text = "";
-    for (challenge_id in challenge_ids.vals()) {
-      let challenge = Option.unwrap(challengeDB.get(challenge_id));
-      text := text # challengeAsText(challenge) # "\n";
-    };
-    text
-  };
-
   func getUsernameFromOption(maybe_user_id : ? UserId) : Text {
     switch (maybe_user_id) {
       case null { "DUAL" };
