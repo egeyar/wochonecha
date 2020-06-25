@@ -19,7 +19,8 @@ actor Wochonecha {
   flexible var userDb : User.UserDb = User.UserDb();
   flexible var challengeDB: ChallengeDB.ChallengeDB = ChallengeDB.ChallengeDB();
 
-  // The following generates IDs for challenges.
+  // ------------------------------- internal helpers
+  // Generates IDs for challenges.
   flexible object challengeCounter = {
     var count = 0;
     public func get_new_id() : Nat { let id = count; count += 1; id };
@@ -27,12 +28,12 @@ actor Wochonecha {
   };
 
   // Populate the challenge database with some initial challenges.
-  for (tuple in DefaultChallenges.challenges.vals())
-    {
-      challengeDB.add(
-        Challenge.Challenge(challengeCounter.get_new_id(), tuple.0, tuple.1, null));
-    };
+  for (tuple in DefaultChallenges.challenges.vals()) {
+    challengeDB.add(
+      Challenge.Challenge(challengeCounter.get_new_id(), tuple.0, tuple.1, null));
+  };
 
+  // Comparison of ChallengeStatus-values.
   func eqStatus(s1: ChallengeStatus, s2 : ChallengeStatus) : Bool {
     switch (s1, s2) {
       case (#accepted, #accepted) true;
@@ -44,6 +45,7 @@ actor Wochonecha {
     }
   };
 
+  // Textual representation of ChallengeStatus-values.
   func statusText(s: ChallengeStatus) : Text {
     switch (s) {
       case (#accepted) "accepted";
@@ -54,7 +56,7 @@ actor Wochonecha {
     }
   };
 
-  // Add this challenge metadata to the given user's challenges.
+  // Adds the challenge given in `new_cm` to the spefified user's challenges.
   func addNewChallenge(userdata : UserData, new_cm: ChallengeMetadata) : UserData {
     let updated_userdata : UserData = {
       id = userdata.id;
@@ -66,7 +68,7 @@ actor Wochonecha {
     updated_userdata
   };
 
-  // If the user has a challenge metadata with the given id and status, replace it with the given metadata.
+  // If the user has a challenge metadata with the given id and status, replaces it with the new metadata.
   func replaceExistingChallenge(userdata : UserData, new_cm: ChallengeMetadata, oldStatus: ChallengeStatus) : UserData {
     var cs : [ChallengeMetadata] = [];
     for (cm in userdata.challenges.vals()) {
@@ -87,6 +89,7 @@ actor Wochonecha {
     updated_userdata;
   };
 
+  // Looks for a challenge identified by `challenge_id` in cm_array, and if found, returns its status.
   func getStatusIfExists (challenge_id: ChallengeId, cm_array: [ChallengeMetadata]) : ?ChallengeStatus {
     func isit(cm: ChallengeMetadata): Bool {
       cm.id == challenge_id
@@ -97,19 +100,26 @@ actor Wochonecha {
     };
   };
 
+  // ------------------------------- public API
+  // NOTE: For rapid prototyping (via dfx or Candid UI) all the functions below return values
+  // as human-readable text.  In the final application the public API should return structured
+  // data to be proceesed and appropriately displayed by frontend/UI.
+  
+  // Registers the current IC user as a user of the app, with a system-provided id and the given `username`.
   public shared(msg) func createUser(username: Text) : async Text {
     var userData : UserData = userDb.createOrReturn(msg.caller, username);
     "user: id = " # Nat.toText(Nat.fromWord32(Principal.hash(msg.caller))) # ", username = " # userData.name
   };
 
+  // Accepts the given challenge for the current user (if the user has registered previously).
   public shared(msg) func acceptChallenge(challengeId : ChallengeId) : async Text {
-    // Verify the user
+    // Verify the user.
     var userData = switch (userDb.findById(msg.caller)) {
       case (null) { return "user not registered" };
       case (?user) user
     };
 
-    // Verify the challenge
+    // Verify the challenge.
     let challenge = switch (challengeDB.get(challengeId)) {
       case (null) { return "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist" };
       case (?ch) ch
@@ -142,6 +152,8 @@ actor Wochonecha {
     "accepted challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(userData)
   };
 
+  // Suggests on behalf of the current user (if registered) a challenge identfied by `challengeId`
+  // to a user with `username` (if multiple such users exist, the first one is picked).
   public shared(msg) func suggestChallenge(username: Text, challengeId: ChallengeId) : async Text {
     // Verify the user
     switch (userDb.findById(msg.caller)) {
@@ -155,7 +167,7 @@ actor Wochonecha {
       case (?ch) ch
     };
 
-    //Verify the recipient
+    // Verify the recipient
     let users = userDb.findByName(username);
     if (users.len() == 0) {
       return "A user with username " # username # " does not exist";
@@ -186,6 +198,8 @@ actor Wochonecha {
     "suggested challenge " # Nat.toText(challengeId) # " to user " # username
   };
 
+  // Marks the specified challenge as completed for the current user
+  // (if registered and has previously accepted the specified challenge).
   public shared(msg) func completeChallenge(challengeId : ChallengeId) : async Text {
     // Verify the user
     var userData = switch (userDb.findById(msg.caller)) {
@@ -221,6 +235,8 @@ actor Wochonecha {
     "completed challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(userData)
   };
 
+  // Returns data of a user with the specified username, if such a user exists.
+  // If multiple such users exist, the first found is returned.
   public query func getUser(username : Text) : async Text {
     let users = userDb.findByName(username);
     if (users.len() == 0) {
@@ -230,12 +246,14 @@ actor Wochonecha {
      "querying for user " # username # ":\n" # userDataText
   };
 
+  // Sets the progress of the current user on the specified challenge to the given percentage
+  // (if the user is registered and has previously accepted the challenge).
   public shared(msg) func setProgress(challengeId: ChallengeId, newProgress: Nat) : async Text {
     if (newProgress >= 100) {
       return "progress must be less than 100%";
     };
 
-    // Verify the user
+    // Verify the user.
     var userData = switch (userDb.findById(msg.caller)) {
       case (null) { return "user not registered" };
       case (?user) user
@@ -267,6 +285,7 @@ actor Wochonecha {
     "updated progress for challenge: " # Nat.toText(challengeId) # "\n" # userDataAsText(userData)
   };
 
+  // Creates on behalf of the current user a new challenge, and adds it to the public challenge DB.
   public shared(msg) func createChallenge(title: Text, description: Text) : async Text {
     // Verify the user
     let userData = switch (userDb.findById(msg.caller)) {
@@ -280,6 +299,7 @@ actor Wochonecha {
     "A new challenge with id " # Nat.toText(challenge.get_id()) # " is created by user " # username
   };
 
+  // Picks at random an existing challenge from the challenge DB.
   public func pickMeAChallenge() : async Text {
     switch (challengeDB.get_any()) {
       case (null) { "There are no challenges in the database" };
@@ -287,6 +307,7 @@ actor Wochonecha {
     }
   };
 
+  // Returns a description of the challenge identified by `challengeId` (if it exists).
   public query func displayChallenge(challengeId: ChallengeId) : async Text {
     switch (challengeDB.get(challengeId)) {
       case (null) { "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist" };
@@ -294,6 +315,7 @@ actor Wochonecha {
     }
   };
 
+  // Returns the given `userData` as a human-readable text.
   func userDataAsText(userData : UserData) : Text {
     let userId : Text = Nat.toText(Nat.fromWord32(Principal.hash(userData.id)));
     var userText : Text = "id: " # userId # ", name: " # userData.name # ", challenges: [";
@@ -303,6 +325,7 @@ actor Wochonecha {
     return userText # " ]";
   };
 
+  // Returns the given `challenge` as a human-readable text.
   func challengeAsText(challenge: Challenge.Challenge) : Text {
     let id = Nat.toText(challenge.get_id());
     let creator = getUsernameFromOption(challenge.get_creator());
@@ -312,6 +335,7 @@ actor Wochonecha {
       # "\nCreated by " # creator # "\nAccepted " # acception_count # " times\nCompleted " # completion_count # " times"
   };
 
+  // Returns username of the specified user (if present).
   func getUsernameFromOption(maybe_user_id : ? UserId) : Text {
     switch (maybe_user_id) {
       case null { "DUAL" };
