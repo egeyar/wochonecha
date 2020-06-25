@@ -19,87 +19,6 @@ actor Wochonecha {
   flexible var userDb : User.UserDb = User.UserDb();
   flexible var challengeDB: ChallengeDB.ChallengeDB = ChallengeDB.ChallengeDB();
 
-  // ------------------------------- internal helpers
-  // Generates IDs for challenges.
-  flexible object challengeCounter = {
-    var count = 0;
-    public func get_new_id() : Nat { let id = count; count += 1; id };
-    public func get_count() : Nat { count };
-  };
-
-  // Populate the challenge database with some initial challenges.
-  for (tuple in DefaultChallenges.challenges.vals()) {
-    challengeDB.add(
-      Challenge.Challenge(challengeCounter.get_new_id(), tuple.0, tuple.1, null));
-  };
-
-  // Comparison of ChallengeStatus-values.
-  func eqStatus(s1: ChallengeStatus, s2 : ChallengeStatus) : Bool {
-    switch (s1, s2) {
-      case (#accepted, #accepted) true;
-      case (#completed, #completed) true;
-      case (#expired, #expired) true;
-      case (#inprogress, #inprogress) true;
-      case (#suggestion, #suggestion) true;
-      case _ false;
-    }
-  };
-
-  // Textual representation of ChallengeStatus-values.
-  func statusText(s: ChallengeStatus) : Text {
-    switch (s) {
-      case (#accepted) "accepted";
-      case (#completed) "completed";
-      case (#expired) "expired";
-      case (#inprogress) "inprogress";
-      case (#suggestion) "suggestion";
-    }
-  };
-
-  // Adds the challenge given in `new_cm` to the spefified user's challenges.
-  func addNewChallenge(userdata : UserData, new_cm: ChallengeMetadata) : UserData {
-    let updated_userdata : UserData = {
-      id = userdata.id;
-      name = userdata.name;
-      challenges = Array.append<ChallengeMetadata>(userdata.challenges, [new_cm]);
-      friends = userdata.friends;
-    };
-
-    updated_userdata
-  };
-
-  // If the user has a challenge metadata with the given id and status, replaces it with the new metadata.
-  func replaceExistingChallenge(userdata : UserData, new_cm: ChallengeMetadata, oldStatus: ChallengeStatus) : UserData {
-    var cs : [ChallengeMetadata] = [];
-    for (cm in userdata.challenges.vals()) {
-      if (cm.id == new_cm.id and eqStatus(cm.status, oldStatus)) {
-        cs := Array.append<ChallengeMetadata>(cs, [new_cm]);
-      } else {
-        cs := Array.append<ChallengeMetadata>(cs, [cm]);
-      }
-    };
-
-    let updated_userdata : UserData = {
-      id = userdata.id;
-      name = userdata.name;
-      challenges = cs;
-      friends = userdata.friends;
-    };
-
-    updated_userdata;
-  };
-
-  // Looks for a challenge identified by `challenge_id` in cm_array, and if found, returns its status.
-  func getStatusIfExists (challenge_id: ChallengeId, cm_array: [ChallengeMetadata]) : ?ChallengeStatus {
-    func isit(cm: ChallengeMetadata): Bool {
-      cm.id == challenge_id
-    };
-    switch (Array.find<ChallengeMetadata>(isit, cm_array)) {
-      case (null) { null };
-      case (?cm) { ?cm.status };
-    };
-  };
-
   // ------------------------------- public API
   // NOTE: For rapid prototyping (via dfx or Candid UI) all the functions below return values
   // as human-readable text.  In the final application the public API should return structured
@@ -313,6 +232,87 @@ actor Wochonecha {
       case (null) { "A challenge with challenge id " # Nat.toText(challengeId) # " does not exist" };
       case (?challenge) { challengeAsText(challenge) }
     }
+  };
+
+  // ------------------------------- internal helpers
+  // Generates IDs for challenges.
+  flexible object challengeCounter = {
+    var count = 0;
+    public func get_new_id() : Nat { let id = count; count += 1; id };
+    public func get_count() : Nat { count };
+  };
+
+  // Populate the challenge database with some initial challenges.
+  for (tuple in DefaultChallenges.challenges.vals()) {
+    challengeDB.add(
+      Challenge.Challenge(challengeCounter.get_new_id(), tuple.0, tuple.1, null));
+  };
+
+  // Comparison of ChallengeStatus-values.
+  func eqStatus(s1: ChallengeStatus, s2 : ChallengeStatus) : Bool {
+    switch (s1, s2) {
+      case (#accepted, #accepted) true;
+      case (#completed, #completed) true;
+      case (#expired, #expired) true;
+      case (#inprogress, #inprogress) true;
+      case (#suggestion, #suggestion) true;
+      case _ false;
+    }
+  };
+
+  // Textual representation of ChallengeStatus-values.
+  func statusText(s: ChallengeStatus) : Text {
+    switch (s) {
+      case (#accepted) "accepted";
+      case (#completed) "completed";
+      case (#expired) "expired";
+      case (#inprogress) "inprogress";
+      case (#suggestion) "suggestion";
+    }
+  };
+
+  // Adds the challenge given in `new_cm` to the spefified user's challenges.
+  func addNewChallenge(userdata : UserData, new_cm: ChallengeMetadata) : UserData {
+    let updated_userdata : UserData = {
+      id = userdata.id;
+      name = userdata.name;
+      challenges = Array.append<ChallengeMetadata>(userdata.challenges, [new_cm]);
+      friends = userdata.friends;
+    };
+
+    updated_userdata
+  };
+
+  // If the user has a challenge metadata with the given id and status, replaces it with the new metadata.
+  func replaceExistingChallenge(userdata : UserData, new_cm: ChallengeMetadata, oldStatus: ChallengeStatus) : UserData {
+    var cs : [ChallengeMetadata] = [];
+    for (cm in userdata.challenges.vals()) {
+      if (cm.id == new_cm.id and eqStatus(cm.status, oldStatus)) {
+        cs := Array.append<ChallengeMetadata>(cs, [new_cm]);
+      } else {
+        cs := Array.append<ChallengeMetadata>(cs, [cm]);
+      }
+    };
+
+    let updated_userdata : UserData = {
+      id = userdata.id;
+      name = userdata.name;
+      challenges = cs;
+      friends = userdata.friends;
+    };
+
+    updated_userdata;
+  };
+
+  // Looks for a challenge identified by `challenge_id` in cm_array, and if found, returns its status.
+  func getStatusIfExists (challenge_id: ChallengeId, cm_array: [ChallengeMetadata]) : ?ChallengeStatus {
+    func isit(cm: ChallengeMetadata): Bool {
+      cm.id == challenge_id
+    };
+    switch (Array.find<ChallengeMetadata>(isit, cm_array)) {
+      case (null) { null };
+      case (?cm) { ?cm.status };
+    };
   };
 
   // Returns the given `userData` as a human-readable text.
